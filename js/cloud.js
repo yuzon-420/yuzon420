@@ -1,0 +1,210 @@
+// Supabase 雲端層:登入、進度同步、自訂題目
+// 未設定 config.js 時所有函式安全降級(回傳 null / 空陣列),遊戲照常以訪客模式運作。
+
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
+
+let client = null;
+let profile = null; // { display_name, role }
+let cachedUser = null;
+
+export function isConfigured() {
+  return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+}
+
+/**
+ * 初始化;回傳目前的 user(或 null)。
+ * onAuthChanged(user|null, event) 會在登入狀態變化時被呼叫。
+ * 注意 event 可能是 "INITIAL_SESSION"(訂閱當下就會觸發一次,並非真的有人登入/登出)
+ * 或 "TOKEN_REFRESHED"(背景自動續期),呼叫端若要做重整之類的動作必須排除這些事件。
+ */
+export async function initCloud(onAuthChanged) {
+  if (!isConfigured()) return null;
+  const { createClient } = await import(
+    "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"
+  );
+  client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  client.auth.onAuthStateChange((event, session) => {
+    profile = null;
+    cachedUser = session?.user ?? null;
+    if (onAuthChanged) onAuthChanged(cachedUser, event);
+  });
+
+  const { data } = await client.auth.getSession();
+  cachedUser = data.session?.user ?? null;
+  return cachedUser;
+}
+
+export async function refreshUser() {
+  if (!client) return null;
+  const { data } = await client.auth.getSession();
+  cachedUser = data.session?.user ?? null;
+  return cachedUser;
+}
+
+export async function signUp(email, password, displayName) {
+  const { data, error } = await client.auth.signUp({
+    email,
+    password,
+    options: { data: { display_name: displayName } },
+  });
+  if (error) throw new Error(friendlyAuthError(error));
+  return data.user;
+}
+
+export async function signIn(email, password) {
+  const { data, error } = await client.auth.signInWithPassword({ email, password });
+  if (error) throw new Error(friendlyAuthError(error));
+  return data.user;
+}
+
+export async function signOut() {
+  await client?.auth.signOut();
+}
+
+function friendlyAuthError(error) {
+  const msg = error.message || "";
+  if (msg.includes("Invalid login credentials")) return "帳號或密碼錯誤";
+  if (msg.includes("already registered")) return "這個信箱已經註冊過了";
+  if (msg.includes("at least 6 characters")) return "密碼至少要 6 個字元";
+  if (msg.includes("valid email")) return "信箱格式不正確";
+  if (msg.includes("Email not confirmed")) return "信箱尚未驗證,請查收驗證信(或請老師到 Supabase 關閉信箱驗證)";
+  return `發生錯誤:${msg}`;
+}
+
+/** 取得自己的 profile(含 role) */
+export async function fetchProfile() {
+  if (!client) return null;
+  if (profile) return profile;
+  const user = await refreshUser();
+  if (!user) return null;
+  const { data, error } = await client
+    .from("profiles")
+    .select("display_name, role")
+    .eq("id", user.id)
+    .single();
+  if (error) return null;
+  profile = data;
+  return profile;
+}
+
+/** 讀取自己的雲端進度 */
+export async function fetchProgress() {
+  const user = await refreshUser();
+  if (!user) return [];
+  const { data, error } = await client
+    .from("progress")
+    .select("level_id, stars, xp")
+    .eq("user_id", user.id);
+  if (error) {
+    console.warn("讀取雲端進度失敗:", error.message);
+    return [];
+  }
+  return data;
+}
+
+/** 寫入(upsert)一批進度 rows: [{level_id, stars, xp}] */
+export async function upsertProgress(rows) {
+  const user = await refreshUser();
+  if (!user || rows.length === 0) return;
+  const payload = rows.map((r) => ({
+    ...r,
+    user_id: user.id,
+    completed_at: new Date().toISOString(),
+  }));
+  const { error } = await client.from("progress").upsert(payload);
+  if (error) console.warn("同步進度失敗:", error.message);
+}
+
+// 資料庫還沒跑 migration-override.sql 時為 true(缺少 override_id 欄位)
+let migrationNeeded = false;
+
+export function needsMigration() {
+  return migrationNeeded;
+}
+
+/**
+ * 刪除自己在雲端的全部進度。
+ * progress 資料表若沒有 DELETE 政策,Supabase 不會回報錯誤但其實一筆都刪不掉,
+ * 所以刪完回查一次確認,把「靜默失敗」變成明確的結果。
+ * @returns {{ok: boolean, remaining: number}}
+ */
+export async function deleteOwnProgress() {
+  const user = await refreshUser();
+  if (!user) return { ok: true, remaining: 0 }; // 訪客沒有雲端進度
+
+  const { error } = await client.from("progress").delete().eq("user_id", user.id);
+  if (error) throw new Error(error.message);
+
+  const { data, error: checkError } = await client
+    .from("progress")
+    .select("level_id")
+    .eq("user_id", user.id)
+    .limit(1);
+  if (checkError) throw new Error(checkError.message);
+
+  const remaining = data?.length ?? 0;
+  return { ok: remaining === 0, remaining };
+}
+
+/** 讀取自訂題目(含覆寫內建題的記錄) */
+export async function fetchCustomLevels() {
+  if (!client) return [];
+
+  const query = (columns) =>
+    client.from("custom_levels").select(columns).order("chapter_num").order("position");
+
+  let { data, error } = await query(
+    "id, chapter_num, position, data, published, override_id"
+  );
+
+  // 42703 = 欄位不存在。尚未執行 supabase/migration-override.sql 時,
+  // 退回舊欄位查詢,讓網站照常運作(只是不支援覆寫內建題)。
+  if (error?.code === "42703") {
+    migrationNeeded = true;
+    ({ data, error } = await query("id, chapter_num, position, data, published"));
+  }
+
+  if (error) {
+    console.warn("讀取自訂題目失敗:", error.message);
+    return [];
+  }
+  return data ?? [];
+}
+
+/* ── 後台(老師)專用 ───────────────────────── */
+
+export async function adminFetchStudents() {
+  const { data, error } = await client
+    .from("profiles")
+    .select("id, display_name, role, created_at")
+    .order("created_at");
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function adminFetchAllProgress() {
+  const { data, error } = await client
+    .from("progress")
+    .select("user_id, level_id, stars, xp, completed_at");
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function adminInsertLevel(row) {
+  const user = await refreshUser();
+  const { error } = await client
+    .from("custom_levels")
+    .insert({ ...row, created_by: user?.id });
+  if (error) throw new Error(error.message);
+}
+
+export async function adminUpdateLevel(id, patch) {
+  const { error } = await client.from("custom_levels").update(patch).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function adminDeleteLevel(id) {
+  const { error } = await client.from("custom_levels").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}

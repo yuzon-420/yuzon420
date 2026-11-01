@@ -1,0 +1,146 @@
+{
+  "c2-number-format": {
+    "solution": "amount = 12345.5\nformatted = f\"{amount:,.2f}\"",
+    "wrong": "amount = 12345.5\nformatted = str(round(amount, 2))"
+  },
+  "c2-padding": {
+    "solution": "code = 7\nname = \"Io\"\nlong_name = \"Neptune\"\nlabel = f\"{code:04d}|{name:<6}\"\nwide = f\"{long_name:<6}\"",
+    "wrong": "code = 7\nname = \"Io\"\nlong_name = \"Neptune\"\nlabel = f\"{code:04d}|{name:<6}\".strip()\nwide = long_name[:6]"
+  },
+  "c2-percent": {
+    "solution": "ratio = 0.375\npercent = f\"{ratio:.1%}\"",
+    "wrong": "ratio = 0.375\npercent = f\"{ratio * 100:.1%}\""
+  },
+  "c2-dynamic": {
+    "solution": "value = 3.5\nwidth = 8\ndigits = 2\nreading = f\"{value:{width}.{digits}f}\"\ndigits = 0\nwhole = f\"{value:{width}.{digits}f}\"",
+    "wrong": "value = 3.5\nwidth = 8\ndigits = 2\nreading = f\"{value:8.2f}\"\ndigits = 0\nwhole = f\"{value:8.2f}\""
+  },
+  "c2-braces": {
+    "solution": "value = 7\npacket = '{{\"value\": {}}}'.format(value)",
+    "wrong": "value = 7\npacket = '\"value\": {}'.format(value)"
+  },
+  "c2-repr": {
+    "solution": "text = \"line1\\nline2\\t\"\ndebug = f\"raw={text!r}\"",
+    "wrong": "text = \"line1\\nline2\\t\"\ndebug = f\"raw={text}\""
+  },
+  "c2-string-immutable": {
+    "solution": "text = \"Mars base\"\nupdated = text.replace(\"Mars\", \"Moon\")",
+    "wrong": "text = \"Mars base\"\ntext.replace(\"Mars\", \"Moon\")\nupdated = text"
+  },
+  "c2-negative-division": {
+    "solution": "a = -7\nb = 3\nquotient = a // b\nremainder = a % b\nrebuilt = quotient * b + remainder",
+    "wrong": "a = -7\nb = 3\nquotient = int(a / b)\nremainder = a - quotient * b\nrebuilt = quotient * b + remainder"
+  },
+  "c2-float-close": {
+    "solution": "import math\ntotal = 0.1 + 0.2\nexact = total == 0.3\nclose = math.isclose(total, 0.3)",
+    "wrong": "total = 0.1 + 0.2\nexact = total == 0.3\nclose = total == 0.3"
+  },
+  "c2-power-sign": {
+    "solution": "outside = -2 ** 2\ninside = (-2) ** 2\ninverse = 2 ** -2",
+    "wrong": "outside = 4\ninside = 4\ninverse = -4"
+  },
+  "c3-text-bool": {
+    "solution": "raw = \" False \"\nraw_truth = bool(raw)\nenabled = raw.strip().lower() == \"true\"",
+    "wrong": "raw = \" False \"\nraw_truth = bool(raw)\nenabled = bool(raw)"
+  },
+  "c3-none-default": {
+    "solution": "def choose_count(value):\n    if value is None:\n        return 10\n    return value",
+    "wrong": "def choose_count(value):\n    return value or 10"
+  },
+  "c3-short-circuit": {
+    "solution": "def is_fast(distance, seconds):\n    return seconds != 0 and distance / seconds > 10",
+    "wrong": "def is_fast(distance, seconds):\n    return distance / seconds > 10 and seconds != 0"
+  },
+  "c3-chain": {
+    "solution": "def in_band(value):\n    return 0 <= value < 100",
+    "wrong": "def in_band(value):\n    return 0 <= value <= 100"
+  },
+  "c4-iterator": {
+    "solution": "signal = iter(range(3))\nfirst = next(signal)\nremaining = list(signal)\nexhausted = list(signal)\nfresh = list(range(3))",
+    "wrong": "signal = iter(range(3))\nfirst = next(signal)\nremaining = list(signal)\nexhausted = remaining\nfresh = list(range(3))"
+  },
+  "c4-enumerate": {
+    "solution": "crew = [\"Ada\", \"Lin\", \"Bo\"]\nfor number, name in enumerate(crew, start=1):\n    print(f\"{number}:{name}\")",
+    "wrong": "crew = [\"Ada\", \"Lin\", \"Bo\"]\nfor number, name in enumerate(crew[1:], start=1):\n    print(f\"{number}:{name}\")"
+  },
+  "c4-zip": {
+    "solution": "names = [\"Ada\", \"Lin\", \"Bo\"]\nscores = [90, 80]\npairs = zip(names, scores)\nfor name, score in pairs:\n    print(f\"{name}:{score}\")\nleftover = list(pairs)",
+    "wrong": "names = [\"Ada\", \"Lin\", \"Bo\"]\nscores = [90, 80]\npairs = list(zip(names, scores))\nfor name, score in pairs:\n    print(f\"{name}:{score}\")\nleftover = list(pairs)"
+  },
+  "c4-loop-else": {
+    "solution": "def locate(items, target):\n    for item in items:\n        if item == target:\n            break\n    else:\n        return \"找不到\"\n    return \"找到\"",
+    "wrong": "def locate(items, target):\n    for item in items:\n        if item == target:\n            break\n    return \"找到\""
+  },
+  "c6-key-collision": {
+    "solution": "slots = {True: \"布林\", 1: \"整數\", 1.0: \"浮點\", \"1\": \"字串\"}\nsize = len(slots)\nnumeric = slots[True]\ntextual = slots[\"1\"]",
+    "wrong": "slots = {True: \"布林\", 1: \"整數\", 1.0: \"浮點\", \"1\": \"字串\"}\nsize = 4\nnumeric = slots[True]\ntextual = slots[\"1\"]"
+  },
+  "c6-get-none": {
+    "solution": "settings = {\"theme\": None}\npresent = settings.get(\"theme\", \"dark\")\nmissing = settings.get(\"language\", \"zh\")\nhas_theme = \"theme\" in settings",
+    "wrong": "settings = {\"theme\": None}\npresent = settings.get(\"theme\") or \"dark\"\nmissing = settings.get(\"language\", \"zh\")\nhas_theme = \"theme\" in settings"
+  },
+  "c6-live-view": {
+    "solution": "stock = {\"oxygen\": 1}\nview = stock.keys()\nsnapshot = list(stock.keys())\nstock[\"water\"] = 2\ncurrent = list(view)",
+    "wrong": "stock = {\"oxygen\": 1}\nview = list(stock.keys())\nsnapshot = list(stock.keys())\nstock[\"water\"] = 2\ncurrent = list(view)"
+  },
+  "c6-fromkeys": {
+    "solution": "def make_bags(names):\n    return {name: [] for name in names}",
+    "wrong": "def make_bags(names):\n    return dict.fromkeys(names, [])"
+  },
+  "c7-mutable-default": {
+    "solution": "def add_task(task, tasks=None):\n    if tasks is None:\n        tasks = []\n    tasks.append(task)\n    return tasks",
+    "wrong": "def add_task(task, tasks=[]):\n    tasks.append(task)\n    return tasks"
+  },
+  "c7-rebind": {
+    "solution": "def empty_bag(items):\n    items.clear()\n    return items",
+    "wrong": "def empty_bag(items):\n    items = []\n    return items"
+  },
+  "c7-closure": {
+    "solution": "def make_buttons():\n    buttons = []\n    for i in range(3):\n        buttons.append(lambda i=i: i)\n    return buttons",
+    "wrong": "def make_buttons():\n    buttons = []\n    for i in range(3):\n        buttons.append(lambda: i)\n    return buttons"
+  },
+  "c7-generator": {
+    "solution": "events = []\ndef readings():\n    events.append(\"start\")\n    yield 10\n    events.append(\"resume\")\n    yield 20\nstream = readings()\nbefore = events.copy()\nfirst = next(stream)\nafter_first = events.copy()\nsecond = next(stream)\nafter_second = events.copy()",
+    "wrong": "events = []\ndef readings():\n    events.append(\"start\")\n    yield 10\n    events.append(\"resume\")\n    yield 20\nstream = readings()\nbefore = events\nfirst = next(stream)\nafter_first = events\nsecond = next(stream)\nafter_second = events"
+  },
+  "c9-finally": {
+    "solution": "def parse_number(text, events):\n    try:\n        return int(text)\n    except ValueError:\n        return None\n    finally:\n        events.append(\"done\")",
+    "wrong": "def parse_number(text, events):\n    try:\n        return int(text)\n    except ValueError:\n        return None\n    finally:\n        events.append(\"done\")\n        return 0"
+  },
+  "c9-except-order": {
+    "solution": "def classify(text):\n    try:\n        int(text)\n        return \"ok\"\n    except ValueError:\n        return \"bad value\"\n    except Exception:\n        return \"other error\"",
+    "wrong": "def classify(text):\n    try:\n        int(text)\n        return \"ok\"\n    except Exception:\n        return \"other error\"\n    except ValueError:\n        return \"bad value\""
+  },
+  "c5-alias": {
+    "solution": "cargo = [\"氧氣\"]\n\n# 建立 alias、snapshot，再透過 alias 加入水\nalias = cargo\nsnapshot = cargo.copy()\nalias.append(\"水\")",
+    "wrong": "cargo = [\"氧氣\"]\n\n# 建立 alias、snapshot，再透過 alias 加入水\nalias = cargo.copy()\nsnapshot = cargo.copy()\nalias.append(\"水\")"
+  },
+  "c5-shallow": {
+    "solution": "original = [[1, 2], [3, 4]]\n\n# 建立淺拷貝，再執行兩個 append\ncopied = original.copy()\ncopied[0].append(9)\ncopied.append([5, 6])",
+    "wrong": "original = [[1, 2], [3, 4]]\n\n# 建立淺拷貝，再執行兩個 append\ncopied = original\ncopied[0].append(9)\ncopied.append([5, 6])"
+  },
+  "c5-deep": {
+    "solution": "import copy\n\nroutes = [[\"Earth\", [\"Moon\"]], [\"Mars\", [\"Phobos\"]]]\n\n# 建立 cloned，再修改副本的第一條路線\ncloned = copy.deepcopy(routes)\ncloned[0][1].append(\"Europa\")",
+    "wrong": "import copy\n\nroutes = [[\"Earth\", [\"Moon\"]], [\"Mars\", [\"Phobos\"]]]\n\n# 建立 cloned，再修改副本的第一條路線\ncloned = routes.copy()\ncloned[0][1].append(\"Europa\")"
+  },
+  "c5-repeat": {
+    "solution": "rows = 3\ncols = 2\n\n# 修正共用列的問題，再修改第一列第二格\ngrid = [[0] * cols] * rows\ngrid = [[0] * cols for _ in range(rows)]\ngrid[0][1] = 9",
+    "wrong": "rows = 3\ncols = 2\n\n# 修正共用列的問題，再修改第一列第二格\ngrid = [[0] * cols] * rows\ngrid = [[0] * cols] * rows\ngrid[0][1] = 9"
+  },
+  "c5-deep-shared": {
+    "solution": "import copy\n\nshared = [\"A\"]\noriginal = [shared, shared]\n\n# 建立 cloned 並修改 cloned[0]\ncloned = copy.deepcopy(original)\ncloned[0].append(\"B\")",
+    "wrong": "import copy\n\nshared = [\"A\"]\noriginal = [shared, shared]\n\n# 建立 cloned 並修改 cloned[0]\ncloned = [copy.deepcopy(item) for item in original]\ncloned[0].append(\"B\")"
+  },
+  "c5-tuple-inner": {
+    "solution": "manifest = ([\"氧氣\"], \"A1\")\noriginal_manifest = manifest\n\n# 修改內層串列，再轉成 inner 元組\nmanifest[0].append(\"水\")\ninner = tuple(manifest[0])",
+    "wrong": "manifest = ([\"氧氣\"], \"A1\")\noriginal_manifest = manifest\n\n# 修改內層串列，再轉成 inner 元組\nmanifest = ([\"氧氣\", \"水\"], \"A1\")\ninner = tuple(manifest[0])"
+  },
+  "c5-sort-return": {
+    "solution": "nums = [3, 1, 2]\nresult = nums.sort()\nis_none = result is None",
+    "wrong": "nums = [3, 1, 2]\nresult = sorted(nums)\nis_none = result is None"
+  },
+  "c5-slice-assign": {
+    "solution": "items = [1, 2, 3]\nalias = items\nitems[:] = [8, 9]",
+    "wrong": "items = [1, 2, 3]\nalias = items\nitems = [8, 9]"
+  }
+}
