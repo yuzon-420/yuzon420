@@ -1,0 +1,182 @@
+[
+  {
+    "chapter": 2,
+    "after": "c2-print",
+    "id": "c2-number-format"
+  },
+  {
+    "chapter": 2,
+    "after": "c2-print",
+    "id": "c2-padding"
+  },
+  {
+    "chapter": 2,
+    "after": "c2-print",
+    "id": "c2-percent"
+  },
+  {
+    "chapter": 2,
+    "after": "c2-print",
+    "id": "c2-dynamic"
+  },
+  {
+    "chapter": 2,
+    "after": "c2-print",
+    "id": "c2-braces"
+  },
+  {
+    "chapter": 2,
+    "after": "c2-print",
+    "id": "c2-repr"
+  },
+  {
+    "chapter": 2,
+    "after": "c2-types",
+    "id": "c2-string-immutable"
+  },
+  {
+    "chapter": 2,
+    "after": "c2-arith",
+    "id": "c2-negative-division"
+  },
+  {
+    "chapter": 2,
+    "after": "c2-arith",
+    "id": "c2-float-close"
+  },
+  {
+    "chapter": 2,
+    "after": "c2-priority",
+    "id": "c2-power-sign"
+  },
+  {
+    "chapter": 3,
+    "after": "c3-if",
+    "id": "c3-text-bool"
+  },
+  {
+    "chapter": 3,
+    "after": "c3-ifelse",
+    "id": "c3-none-default"
+  },
+  {
+    "chapter": 3,
+    "after": "c3-ifelse",
+    "id": "c3-short-circuit"
+  },
+  {
+    "chapter": 3,
+    "after": "c3-elif",
+    "id": "c3-chain"
+  },
+  {
+    "chapter": 4,
+    "after": "c4-for",
+    "id": "c4-iterator"
+  },
+  {
+    "chapter": 4,
+    "after": "c4-for",
+    "id": "c4-enumerate"
+  },
+  {
+    "chapter": 4,
+    "after": "c4-for",
+    "id": "c4-zip"
+  },
+  {
+    "chapter": 4,
+    "after": "c4-break",
+    "id": "c4-loop-else"
+  },
+  {
+    "chapter": 6,
+    "after": "c6-create",
+    "id": "c6-key-collision"
+  },
+  {
+    "chapter": 6,
+    "after": "c6-in",
+    "id": "c6-get-none"
+  },
+  {
+    "chapter": 6,
+    "after": "c6-keysvalues",
+    "id": "c6-live-view"
+  },
+  {
+    "chapter": 6,
+    "after": "c6-setdefault",
+    "id": "c6-fromkeys"
+  },
+  {
+    "chapter": 7,
+    "after": "c7-default",
+    "id": "c7-mutable-default"
+  },
+  {
+    "chapter": 7,
+    "after": "c7-scope",
+    "id": "c7-rebind"
+  },
+  {
+    "chapter": 7,
+    "after": "c7-scope",
+    "id": "c7-closure"
+  },
+  {
+    "chapter": 7,
+    "after": "c7-def",
+    "id": "c7-generator"
+  },
+  {
+    "chapter": 9,
+    "after": "c9-tryexcept",
+    "id": "c9-finally"
+  },
+  {
+    "chapter": 9,
+    "after": "c9-tryexcept",
+    "id": "c9-except-order"
+  },
+  {
+    "chapter": 5,
+    "after": "c5-append",
+    "id": "c5-alias"
+  },
+  {
+    "chapter": 5,
+    "after": "c5-append",
+    "id": "c5-shallow"
+  },
+  {
+    "chapter": 5,
+    "after": "c5-append",
+    "id": "c5-deep"
+  },
+  {
+    "chapter": 5,
+    "after": "c5-append",
+    "id": "c5-repeat"
+  },
+  {
+    "chapter": 5,
+    "after": "c5-append",
+    "id": "c5-deep-shared"
+  },
+  {
+    "chapter": 5,
+    "after": "c5-tuple",
+    "id": "c5-tuple-inner"
+  },
+  {
+    "chapter": 5,
+    "after": "c5-sort",
+    "id": "c5-sort-return"
+  },
+  {
+    "chapter": 5,
+    "after": "c5-remove",
+    "id": "c5-slice-assign"
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "name": "pyquest",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/verify-course.mjs",
+    "test:layout": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "codemirror": "^5.65.16"
+  }
+}
