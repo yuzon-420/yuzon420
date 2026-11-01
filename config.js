@@ -4,5 +4,5 @@
 //   SUPABASE_ANON_KEY: anon public key(這是設計上可公開的金鑰,資料由 RLS 保護)
 // 尚未填寫時,網站以「訪客模式」運作:一切可玩,進度只存在瀏覽器本機。
 
-export const SUPABASE_URL = "https://qeblglujuikwtuugmykg.supabase.co/rest/v1/";
+export const SUPABASE_URL = "https://qeblglujuikwtuugmykg.supabase.co";
 export const SUPABASE_ANON_KEY = "sb_publishable_ebOLJgnorFF6NdAg4brmeA_Ga8V-F__";
