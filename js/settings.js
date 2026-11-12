@@ -154,7 +154,7 @@ async function handleReset() {
       if (!ok) {
         feedback(
           `雲端還有 ${remaining} 筆進度沒有刪掉,本機進度保持原樣。` +
-            "請老師到 Supabase 執行 supabase/migration-reset-progress.sql 後再試一次。",
+            "請老師確認 Firebase 已發布最新的 firestore.rules 後再試一次。",
           "error"
         );
         return;

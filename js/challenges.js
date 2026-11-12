@@ -30,7 +30,7 @@ const RANK_TITLES = [
 ];
 
 /**
- * 建立完整課程。customRows 是 Supabase custom_levels 的資料列:
+ * 建立完整課程。customRows 是 Firestore custom_levels 集合的文件:
  * [{ id, chapter_num, position, data: {...}, override_id }]
  *
  * 兩種資料列:

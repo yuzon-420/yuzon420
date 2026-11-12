@@ -151,8 +151,11 @@ async function handleRun() {
   state.recordAttempt(currentLevel.id);
 
   try {
-    const result = await runCode(editor.getValue(), currentLevel.tests, currentLevel.stdin ?? []);
+    const code = editor.getValue();
+    const result = await runCode(code, currentLevel.tests, currentLevel.stdin ?? []);
     renderRunResult(result);
+    // 記錄給老師後台看;不等待、失敗也不影響遊玩
+    cloud.recordSubmission({ levelId: currentLevel.id, code, result });
     if (!result.error && result.results.every((r) => r.passed)) {
       celebrate();
     }

@@ -14,7 +14,7 @@ test.beforeEach(async ({ page }) => {
     contentType: "text/javascript",
   }));
   await page.route("**/js/config.js", route => route.fulfill({
-    body: 'export const SUPABASE_URL = ""; export const SUPABASE_ANON_KEY = "";',
+    body: 'export const FIREBASE_CONFIG = { apiKey: "", authDomain: "", projectId: "", appId: "" };',
     contentType: "text/javascript",
   }));
 });

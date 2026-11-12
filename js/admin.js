@@ -1,14 +1,17 @@
-// 教師後台:學生進度總覽 + 自訂題目管理
-// 權限由 Supabase RLS 把關(is_teacher()),這裡的檢查只是為了介面提示。
+// 教師後台:學生進度總覽 + 解題紀錄 + 全班錯誤統計 + 自訂題目管理
+// 權限由 Firestore 安全規則(firebase/firestore.rules)把關,這裡的檢查只是為了介面提示。
 
 import * as cloud from "./cloud.js";
-import { DEFAULT_COURSE, CHAPTER_OPTIONS } from "./challenges.js";
+import { DEFAULT_COURSE, CHAPTER_OPTIONS, buildCourse } from "./challenges.js";
 
 const el = (id) => document.getElementById(id);
 
 let students = [];
 let progressRows = [];
 let customLevels = [];
+let course = DEFAULT_COURSE; // 含老師覆寫與新增題目的完整課程
+let subSummary = null; // 解題紀錄總覽(切到相關分頁時才載入)
+let subSummaryError = null;
 
 // 目前正在編輯什麼:
 //   { mode: "new" }                        新增一題
@@ -20,7 +23,7 @@ let editing = null;
 async function boot() {
   if (!cloud.isConfigured()) {
     el("gate-message").innerHTML =
-      "尚未設定 Supabase。<br />請先填好 <code>js/config.js</code> 的兩個值,並在 Supabase 執行 <code>supabase/schema.sql</code>。";
+      "尚未設定 Firebase。<br />請先把 Firebase 的設定值填進 <code>js/config.js</code>,並發布 <code>firebase/firestore.rules</code>。";
     return;
   }
 
@@ -39,7 +42,7 @@ async function boot() {
   const profile = await cloud.fetchProfile();
   if (profile?.role !== "teacher") {
     el("gate-message").innerHTML =
-      "這個帳號沒有教師權限。<br />請在 Supabase 的 profiles 資料表把你的 role 改成 <code>teacher</code>。";
+      "這個帳號沒有教師權限。<br />請到 Firebase Console → Firestore Database → <code>users</code> 集合,找到你的文件,把 <code>role</code> 改成 <code>teacher</code>。";
     return;
   }
 
@@ -55,6 +58,20 @@ async function boot() {
 function bindEvents() {
   el("tab-students").addEventListener("click", () => switchTab("students"));
   el("tab-levels").addEventListener("click", () => switchTab("levels"));
+  el("tab-code").addEventListener("click", () => switchTab("code"));
+  el("tab-class").addEventListener("click", () => switchTab("class"));
+  el("code-student").addEventListener("change", onCodeStudentChange);
+  el("code-level").addEventListener("change", loadSubmissionList);
+  el("btn-code-reload").addEventListener("click", async () => {
+    subSummary = null;
+    await ensureSummary();
+    fillCodeStudents();
+  });
+  el("class-level").addEventListener("change", loadClassStats);
+  el("btn-class-reload").addEventListener("click", async () => {
+    subSummary = null;
+    await openClassTab();
+  });
   el("btn-refresh").addEventListener("click", refreshAll);
   el("btn-new-level").addEventListener("click", () => openEditor({ mode: "new" }));
   el("filter-chapter").addEventListener("change", renderLevels);
@@ -63,10 +80,12 @@ function bindEvents() {
 }
 
 function switchTab(name) {
-  el("tab-students").classList.toggle("is-active", name === "students");
-  el("tab-levels").classList.toggle("is-active", name === "levels");
-  el("panel-students").classList.toggle("is-hidden", name !== "students");
-  el("panel-levels").classList.toggle("is-hidden", name !== "levels");
+  for (const t of ["students", "code", "class", "levels"]) {
+    el(`tab-${t}`).classList.toggle("is-active", name === t);
+    el(`panel-${t}`).classList.toggle("is-hidden", name !== t);
+  }
+  if (name === "code") openCodeTab();
+  if (name === "class") openClassTab();
 }
 
 async function refreshAll() {
@@ -76,6 +95,8 @@ async function refreshAll() {
       cloud.adminFetchAllProgress(),
       cloud.fetchCustomLevels(),
     ]);
+    course = buildCourse(customLevels);
+    subSummary = null;
     renderStudents();
     renderLevels();
   } catch (err) {
@@ -158,10 +179,6 @@ function renderLevels() {
   el("levels-summary").textContent =
     `內建 ${DEFAULT_COURSE.challenges.length} 題(已修改 ${overrides.size} 題) · 新增 ${additions.length} 題`;
 
-  // 資料庫還沒加 override_id 欄位時,內建題只能瀏覽不能編輯
-  const locked = cloud.needsMigration();
-  el("migration-warning").classList.toggle("is-hidden", !locked);
-
   const tbody = el("levels-table").querySelector("tbody");
   tbody.innerHTML = "";
 
@@ -191,10 +208,6 @@ function renderLevels() {
       const ov = overrides.get(level.id);
       const shown = ov ? { ...ov.data } : level;
       const editBtn = makeBtn("編輯", () => openEditor({ mode: "builtin", level, row: ov ?? null }));
-      if (locked) {
-        editBtn.disabled = true;
-        editBtn.title = "需要先在 Supabase 執行 migration-override.sql";
-      }
       const actions = [editBtn];
 
       if (ov) {
@@ -417,6 +430,332 @@ async function saveLevel(e) {
     btn.disabled = false;
     btn.textContent = "儲存題目";
   }
+}
+
+/* ── 解題紀錄 + 全班錯誤統計 ── */
+function levelInfo(levelId) {
+  return course.challenges.find((c) => c.id === levelId) ?? null;
+}
+
+function levelTitle(levelId) {
+  const lv = levelInfo(levelId);
+  return lv ? `第 ${lv.label} 關 · ${lv.title}` : levelId;
+}
+
+/** 讀取解題統計總覽;讀不到(例如規則沒發布)時在兩個分頁顯示提示 */
+async function ensureSummary() {
+  if (subSummary) return true;
+  try {
+    subSummary = await cloud.adminFetchSubmissionSummary();
+    subSummaryError = null;
+  } catch (err) {
+    subSummary = null;
+    subSummaryError = err.message;
+  }
+  for (const id of ["code-warning", "class-warning"]) {
+    el(id).textContent = subSummaryError ? `⚠️ ${subSummaryError}` : "";
+    el(id).classList.toggle("is-hidden", !subSummaryError);
+  }
+  return !subSummaryError;
+}
+
+function userLevelStats() {
+  // key: `${user_id}|${level_id}` → { attempts, passed }
+  const map = new Map();
+  for (const s of subSummary ?? []) {
+    const key = `${s.user_id}|${s.level_id}`;
+    if (!map.has(key)) map.set(key, { user_id: s.user_id, level_id: s.level_id, attempts: 0, passed: false });
+    const acc = map.get(key);
+    acc.attempts += s.attempts ?? 1;
+    if (s.passed) acc.passed = true;
+  }
+  return map;
+}
+
+const courseOrder = (levelId) => {
+  const i = course.challenges.findIndex((c) => c.id === levelId);
+  return i < 0 ? 9999 : i;
+};
+
+async function openCodeTab() {
+  await ensureSummary();
+  fillCodeStudents();
+}
+
+function fillCodeStudents() {
+  const select = el("code-student");
+  const previous = select.value;
+  const runsByUser = new Map();
+  for (const s of subSummary ?? []) runsByUser.set(s.user_id, (runsByUser.get(s.user_id) ?? 0) + (s.attempts ?? 1));
+
+  const learners = students
+    .filter((s) => s.role === "student")
+    .sort((a, b) => (a.display_name || "").localeCompare(b.display_name || "", "zh-TW"));
+
+  select.innerHTML = "";
+  if (learners.length === 0) {
+    select.innerHTML = '<option value="">還沒有學生</option>';
+  } else {
+    for (const s of learners) {
+      const opt = document.createElement("option");
+      opt.value = s.id;
+      opt.textContent = `${s.display_name || "(未命名)"} · ${runsByUser.get(s.id) ?? 0} 次執行`;
+      select.appendChild(opt);
+    }
+    if (learners.some((s) => s.id === previous)) select.value = previous;
+  }
+  onCodeStudentChange();
+}
+
+let pendingLevel = null; // 從全班統計跳到某位學生時,指定要預選的關卡
+
+function onCodeStudentChange() {
+  const userId = el("code-student").value;
+  const levelSelect = el("code-level");
+  const previous = pendingLevel ?? levelSelect.value;
+  pendingLevel = null;
+  const mine = [...userLevelStats().values()]
+    .filter((x) => x.user_id === userId)
+    .sort((a, b) => courseOrder(a.level_id) - courseOrder(b.level_id));
+
+  levelSelect.innerHTML = "";
+  if (mine.length === 0) {
+    levelSelect.innerHTML = '<option value="">這位學生還沒有紀錄</option>';
+  } else {
+    for (const x of mine) {
+      const opt = document.createElement("option");
+      opt.value = x.level_id;
+      opt.textContent = `${levelTitle(x.level_id)} — ${x.attempts} 次 ${x.passed ? "✅" : "❌ 未通過"}`;
+      levelSelect.appendChild(opt);
+    }
+    if (mine.some((x) => x.level_id === previous)) levelSelect.value = previous;
+  }
+  loadSubmissionList();
+}
+
+async function loadSubmissionList() {
+  const userId = el("code-student").value;
+  const levelId = el("code-level").value;
+  const list = el("code-list");
+  list.innerHTML = "";
+
+  if (!userId || !levelId) {
+    el("code-summary").textContent = subSummaryError
+      ? ""
+      : "這位學生還沒有執行過任何關卡(只有登入後的執行才會被記錄)。";
+    return;
+  }
+
+  el("code-summary").textContent = "載入中…";
+  let rows;
+  try {
+    rows = await cloud.adminFetchSubmissions({ userId, levelId, limit: 200 });
+  } catch (err) {
+    el("code-summary").textContent = `讀取失敗:${err.message}`;
+    return;
+  }
+  rows.reverse(); // 由舊到新,才看得出學生一步步怎麼改
+
+  const passedAt = rows.findIndex((r) => r.passed);
+  el("code-summary").textContent =
+    `${levelTitle(levelId)} · 共 ${rows.length} 次執行 · ` +
+    (passedAt >= 0 ? `第 ${passedAt + 1} 次通過` : "尚未通過") +
+    (rows.length >= 200 ? "(只顯示最近 200 次)" : "");
+
+  rows.forEach((r, i) => list.appendChild(renderSubmission(r, i + 1, i === rows.length - 1)));
+}
+
+function renderSubmission(row, n, open) {
+  const details = document.createElement("details");
+  details.className = `sub-card ${row.passed ? "is-pass" : "is-fail"}`;
+  details.open = open;
+
+  const head = document.createElement("summary");
+  const failedCount = (row.results ?? []).filter((r) => !r.passed).length;
+  head.textContent =
+    `第 ${n} 次 · ${new Date(row.created_at).toLocaleString("zh-TW", { hour12: false })} · ` +
+    (row.passed ? "✅ 通過" : row.error ? "❌ 程式出錯" : `❌ ${failedCount} 項測試未過`);
+  details.appendChild(head);
+
+  const addBlock = (label, text, cls = "") => {
+    const wrap = document.createElement("div");
+    wrap.className = "sub-block";
+    const lab = document.createElement("p");
+    lab.className = "sub-label";
+    lab.textContent = label;
+    const pre = document.createElement("pre");
+    pre.className = `sub-pre ${cls}`;
+    pre.textContent = text; // 學生的內容只當純文字顯示
+    wrap.append(lab, pre);
+    details.appendChild(wrap);
+  };
+
+  addBlock("程式碼", row.code);
+  if (row.error) addBlock("錯誤訊息", row.error, "is-error");
+  else addBlock("輸出", row.output || "(沒有輸出)");
+
+  if ((row.results ?? []).length > 0) {
+    const ul = document.createElement("ul");
+    ul.className = "sub-tests";
+    for (const r of row.results) {
+      const li = document.createElement("li");
+      li.className = r.passed ? "pass" : "fail";
+      li.textContent = `${r.passed ? "✅" : "❌"} ${r.name}${r.passed || !r.message ? "" : ` — ${r.message}`}`;
+      ul.appendChild(li);
+    }
+    details.appendChild(ul);
+  }
+  return details;
+}
+
+/* ── 全班共通錯誤(統計由瀏覽器依解題紀錄計算,不依賴 AI)── */
+async function openClassTab() {
+  await ensureSummary();
+  const perLevel = new Map(); // level_id → { students:Set, passed:Set }
+  for (const s of subSummary ?? []) {
+    if (!perLevel.has(s.level_id)) perLevel.set(s.level_id, { students: new Set(), passed: new Set() });
+    const acc = perLevel.get(s.level_id);
+    acc.students.add(s.user_id);
+    if (s.passed) acc.passed.add(s.user_id);
+  }
+  const select = el("class-level");
+  const previous = select.value;
+  select.innerHTML = "";
+  const ids = [...perLevel.keys()].sort((a, b) => courseOrder(a) - courseOrder(b));
+  if (ids.length === 0) {
+    select.innerHTML = '<option value="">還沒有任何解題紀錄</option>';
+  } else {
+    for (const id of ids) {
+      const acc = perLevel.get(id);
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = `${levelTitle(id)} — ${acc.students.size} 人嘗試、${acc.passed.size} 人通過`;
+      select.appendChild(opt);
+    }
+    if (ids.includes(previous)) select.value = previous;
+  }
+  await loadClassStats();
+}
+
+const firstLine = (text) =>
+  (String(text ?? "").split("\n").find((l) => l.trim()) ?? "").trim().slice(0, 80);
+
+/** 由某一關全班的所有紀錄,算出統計與「還沒通過的學生」 */
+function computeClassStats(rows) {
+  const byUser = new Map();
+  for (const r of [...rows].sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))) {
+    if (!byUser.has(r.user_id)) byUser.set(r.user_id, []);
+    byUser.get(r.user_id).push(r);
+  }
+
+  const failTests = new Map(); // 測試名稱 → 曾在該測試失敗的學生數
+  const errKinds = new Map(); // 錯誤訊息首行 → 曾遇到的學生數
+  const stuck = [];
+  let passedStudents = 0;
+  let totalAttemptsToPass = 0;
+
+  for (const [userId, list] of byUser) {
+    const firstPass = list.findIndex((r) => r.passed);
+    if (firstPass >= 0) {
+      passedStudents += 1;
+      totalAttemptsToPass += firstPass + 1;
+    }
+    const testSet = new Set();
+    const errSet = new Set();
+    for (const r of list) {
+      for (const t of r.results ?? []) if (!t.passed) testSet.add(String(t.name).slice(0, 80));
+      if (r.error) errSet.add(firstLine(r.error));
+    }
+    testSet.forEach((t) => failTests.set(t, (failTests.get(t) ?? 0) + 1));
+    errSet.forEach((e) => errKinds.set(e, (errKinds.get(e) ?? 0) + 1));
+
+    if (firstPass < 0) {
+      const last = list[list.length - 1];
+      const failed = (last.results ?? []).filter((t) => !t.passed).map((t) => t.name);
+      stuck.push({
+        user_id: userId,
+        attempts: list.length,
+        last: last.error ? `錯誤:${firstLine(last.error)}` : failed.length ? `未通過:${failed.join("、")}` : "—",
+      });
+    }
+  }
+
+  const top = (m) =>
+    [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([name, students]) => ({ name, students }));
+  return {
+    students: byUser.size,
+    passedStudents,
+    avgAttemptsToPass: passedStudents ? Math.round((totalAttemptsToPass / passedStudents) * 10) / 10 : null,
+    totalRuns: rows.length,
+    topFailingTests: top(failTests),
+    topErrors: top(errKinds),
+    stuck: stuck.sort((a, b) => b.attempts - a.attempts),
+  };
+}
+
+let classToken = 0; // 切換很快時,丟掉過期的回應
+async function loadClassStats() {
+  const levelId = el("class-level").value;
+  const box = el("class-stats");
+  if (!levelId) {
+    box.classList.add("is-hidden");
+    return;
+  }
+  const token = ++classToken;
+  box.classList.remove("is-hidden");
+  box.textContent = "統計中…";
+  try {
+    const rows = await cloud.adminFetchLevelSubmissions(levelId);
+    if (token !== classToken) return;
+    renderClassStats(computeClassStats(rows), levelId, rows.length >= 5000);
+  } catch (err) {
+    if (token !== classToken) return;
+    box.textContent = `讀取失敗:${err.message}`;
+  }
+}
+
+function renderClassStats(s, levelId, truncated) {
+  const box = el("class-stats");
+  const nameOf = (id) => students.find((x) => x.id === id)?.display_name || "(未命名)";
+  const list = (title, items) =>
+    items?.length
+      ? `<div class="stat-list"><h4>${title}</h4><ul>${items
+          .map((x) => `<li><span>${escapeHtml(x.name)}</span><b>${x.students} 人</b></li>`)
+          .join("")}</ul></div>`
+      : "";
+  const stuck = s.stuck.length
+    ? `<div class="stat-list stat-wide"><h4>還沒通過的學生(點名字看他寫的程式碼)</h4><ul>${s.stuck
+        .map(
+          (x) => `<li><span><button class="link-btn" data-user="${escapeHtml(x.user_id)}">${escapeHtml(nameOf(x.user_id))}</button>
+            <small>${escapeHtml(x.last)}</small></span><b>${x.attempts} 次</b></li>`
+        )
+        .join("")}</ul></div>`
+    : "";
+
+  box.innerHTML = `
+    <div class="stat-cards">
+      <div class="stat-card"><span>嘗試人數</span><b>${s.students}</b></div>
+      <div class="stat-card"><span>已通過</span><b>${s.passedStudents}</b></div>
+      <div class="stat-card"><span>平均幾次通過</span><b>${s.avgAttemptsToPass ?? "—"}</b></div>
+      <div class="stat-card"><span>總執行次數</span><b>${s.totalRuns}</b></div>
+    </div>
+    <div class="stat-lists">
+      ${list("最常失敗的測試", s.topFailingTests)}
+      ${list("最常出現的錯誤訊息", s.topErrors)}
+      ${stuck}
+    </div>
+    ${truncated ? '<p class="ai-note">紀錄超過 5000 筆,只統計其中一部分。</p>' : ""}`;
+
+  box.querySelectorAll(".link-btn").forEach((btn) =>
+    btn.addEventListener("click", () => jumpToStudent(btn.dataset.user, levelId))
+  );
+}
+
+/** 從全班統計跳到「解題紀錄」分頁,直接顯示那位學生在這一關的程式碼 */
+function jumpToStudent(userId, levelId) {
+  el("code-student").value = userId;
+  pendingLevel = levelId;
+  switchTab("code");
 }
 
 function escapeHtml(text) {

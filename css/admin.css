@@ -196,3 +196,199 @@
   cursor: not-allowed;
   transform: none;
 }
+
+/* ── 解題紀錄 / AI 分析 ── */
+.toolbar-right {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.toolbar-right select {
+  max-width: 22rem;
+}
+
+.ai-note {
+  font-size: 0.82rem;
+  color: var(--color-text-faint);
+}
+
+.sub-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.sub-card {
+  border: 1px solid var(--color-border);
+  border-left-width: 4px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.sub-card.is-pass {
+  border-left-color: var(--color-green);
+}
+
+.sub-card.is-fail {
+  border-left-color: var(--color-red);
+}
+
+.sub-card > summary {
+  padding: 0.7em 1em;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.sub-card[open] > summary {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sub-block {
+  padding: 0.7rem 1rem 0;
+}
+
+.sub-label {
+  margin: 0 0 0.3rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: var(--color-text-faint);
+}
+
+.sub-pre {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+  background: var(--color-space);
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  line-height: 1.6;
+  white-space: pre;
+  tab-size: 4;
+}
+
+.sub-pre.is-error {
+  color: var(--color-red);
+  white-space: pre-wrap;
+}
+
+.sub-tests {
+  list-style: none;
+  margin: 0;
+  padding: 0.7rem 1rem 1rem;
+  font-size: 0.88rem;
+}
+
+.sub-tests li.fail {
+  color: var(--color-amber);
+}
+
+/* 全班統計 */
+.class-stats {
+  margin-bottom: 1.2rem;
+}
+
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.stat-card {
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.stat-card span {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--color-text-faint);
+}
+
+.stat-card b {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  color: var(--color-cyan);
+}
+
+.stat-lists {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.8rem;
+}
+
+.stat-list {
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.stat-list h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: var(--color-text-dim);
+}
+
+.stat-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.stat-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.35em 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.88rem;
+}
+
+.stat-list li span {
+  overflow-wrap: anywhere;
+}
+
+.stat-list li b {
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .panel-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .toolbar-right select {
+    max-width: 100%;
+    flex: 1 1 100%;
+  }
+}
+
+/* 全班統計:還沒通過的學生 */
+.stat-list.stat-wide {
+  grid-column: 1 / -1;
+}
+
+.stat-list li small {
+  display: block;
+  margin-top: 0.15em;
+  color: var(--color-text-faint);
+  overflow-wrap: anywhere;
+}
+
+.link-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-cyan);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}

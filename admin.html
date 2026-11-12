@@ -38,6 +38,8 @@
     <section id="admin-body" class="is-hidden">
       <nav class="admin-tabs">
         <button class="admin-tab is-active" id="tab-students">👨‍🚀 學生進度</button>
+        <button class="admin-tab" id="tab-code">💻 解題紀錄</button>
+        <button class="admin-tab" id="tab-class">📊 全班錯誤分析</button>
         <button class="admin-tab" id="tab-levels">🧪 題目管理</button>
       </nav>
 
@@ -63,12 +65,38 @@
         </div>
       </div>
 
+      <!-- 解題紀錄:看學生每次寫的程式碼與錯誤,並請 AI 整理 -->
+      <div id="panel-code" class="is-hidden">
+        <p class="migration-warning is-hidden" id="code-warning"></p>
+        <div class="panel-toolbar">
+          <span id="code-summary">選一位學生,就能看到他每一關每次執行的程式碼。</span>
+          <div class="toolbar-right">
+            <label class="filter-label" for="code-student">學生</label>
+            <select id="code-student"></select>
+            <label class="filter-label" for="code-level">關卡</label>
+            <select id="code-level"></select>
+            <button class="btn btn-ghost" id="btn-code-reload">↻ 重新載入</button>
+          </div>
+        </div>
+        <div id="code-list" class="sub-list"></div>
+      </div>
+
+      <!-- 全班共通錯誤 -->
+      <div id="panel-class" class="is-hidden">
+        <p class="migration-warning is-hidden" id="class-warning"></p>
+        <div class="panel-toolbar">
+          <span id="class-summary">選一關,看全班最常失敗的測試、最常見的錯誤訊息,以及還沒通過的學生。</span>
+          <div class="toolbar-right">
+            <label class="filter-label" for="class-level">關卡</label>
+            <select id="class-level"></select>
+            <button class="btn btn-ghost" id="btn-class-reload">↻ 重新統計</button>
+          </div>
+        </div>
+        <div id="class-stats" class="class-stats is-hidden"></div>
+      </div>
+
       <!-- 題目管理 -->
       <div id="panel-levels" class="is-hidden">
-        <p class="migration-warning is-hidden" id="migration-warning">
-          ⚠️ 內建題目目前只能瀏覽,不能編輯。請到 Supabase 的 <strong>SQL Editor</strong>
-          執行專案裡的 <code>supabase/migration-override.sql</code>,再重新整理這一頁。
-        </p>
         <div class="panel-toolbar">
           <span id="levels-summary"></span>
           <div class="toolbar-right">
@@ -184,6 +212,6 @@
     </section>
   </main>
 
-  <script type="module" src="js/admin.js?v=2"></script>
+  <script type="module" src="js/admin.js?v=3"></script>
 </body>
 </html>

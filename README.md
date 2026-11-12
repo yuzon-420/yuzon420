@@ -12,9 +12,9 @@
   變數與資料型態(含 input)→ 判斷式 → 迴圈 → 串列與元組 → 字典 → 函式與模組(含 random)→ 演算法(泡沫排序、循序/二分搜尋)→ 檔案與例外處理(try-except、assert)。
 - 💡 **教學導向的回饋**:錯誤訊息翻譯成初學者看得懂的中文提示(含行號),
   每個測試失敗都有引導式訊息;卡關可以看提示(會扣一顆星)。
-- 🔑 **登入與雲端進度**(選用):接上 Supabase 後,學生登入即可跨裝置同步進度;
+- 🔑 **登入與雲端進度**(選用):接上 Firebase 後,學生登入即可跨裝置同步進度;
   未設定時自動以「訪客模式」運作,進度存在瀏覽器本機。
-- 📋 **教師後台**:全班進度總表 + 線上新增/編輯/發布題目,不用改程式碼。
+- 📋 **教師後台**:全班進度總表、每位學生每次寫的程式碼、全班常見錯誤統計,以及線上新增/編輯/發布題目,不用改程式碼。
 - ⌨️ **CodeMirror 編輯器**:語法上色、行號、`Cmd/Ctrl + Enter` 快速執行。
 
 ## 執行方式
@@ -29,61 +29,93 @@ python3 -m http.server 8765
 
 > 需要網路連線:Pyodide、CodeMirror 與字型由 CDN 載入。
 
-## 設定登入與雲端進度(Supabase)
+## 設定登入與雲端進度(Firebase)
 
 不做這步網站也能玩,只是進度只留在本機、沒有後台。
+用到 Firebase 的兩個服務:**Authentication**(登入)與 **Firestore**(資料庫)。
+這一版**不需要** Cloud Functions,所以不必升級付費方案,免費的 Spark 方案就夠用。
+切換到新的 Firebase 專案不會搬移舊系統的帳號或資料;學生需要在新系統重新註冊,進度也會從零開始。
 
-### 1. 建立 Supabase 專案
+### 1. 建立 Firebase 專案與網頁應用程式
 
-到 <https://supabase.com> 免費註冊 → New project(區域選 Singapore 或 Tokyo 比較快)。
-
-### 2. 建立資料表
-
-Dashboard → **SQL Editor** → 貼上 [`supabase/schema.sql`](supabase/schema.sql) 全部內容 → Run。
-
-這會建立 `profiles`、`progress`、`custom_levels` 三張表,並套用 Row Level Security:
-學生只能讀寫自己的進度,只有老師能看全班和管理題目。
-
-### 3. 填入連線資訊
-
-Dashboard → **Project Settings → API**,把兩個值填進 [`js/config.js`](js/config.js):
+1. 到 <https://console.firebase.google.com> 用 Google 帳號登入 → **新增專案**(Google Analytics 可以關閉)。
+2. 專案總覽頁按 **`</>`(網頁)** 註冊應用程式,取個暱稱即可,**不用**勾選 Firebase Hosting。
+3. 畫面會顯示一段 `firebaseConfig`,把裡面的四個值填進 [`js/config.js`](js/config.js):
 
 ```js
-export const SUPABASE_URL = "https://你的專案.supabase.co";
-export const SUPABASE_ANON_KEY = "eyJhbGci...";
+export const FIREBASE_CONFIG = {
+  apiKey: "AIza...",
+  authDomain: "你的專案.firebaseapp.com",
+  projectId: "你的專案",
+  appId: "1:123...:web:abc...",
+};
 ```
 
-> `anon key` 設計上就是公開的(會出現在前端原始碼),資料安全由 RLS 保障。
-> 絕對不要把 `service_role` key 放進來。
+> 這些值設計上就是公開的(每個訪客的瀏覽器都看得到),不是密碼;資料安全靠第 4 步的安全規則。
 
-### 4. 關閉信箱驗證(建議,方便學生註冊)
+### 2. 開啟「電子郵件/密碼」登入
 
-Dashboard → **Authentication → Sign In / Providers → Email** → 關閉 *Confirm email*。
-否則學生註冊後要先收驗證信才能登入。
+**Authentication → 開始使用 → Sign-in method → 電子郵件/密碼 → 啟用**(只開第一個開關)。
+Firebase 預設不需要驗證信箱,學生註冊後可以直接登入。
+
+如果之後登入時出現「這個網址還沒被 Firebase 授權」,到 **Authentication → 設定 → 已授權網域**,
+把你網站的網域(例如 `你的帳號.github.io`)加進去。
+
+### 3. 建立 Firestore 資料庫
+
+**Firestore Database → 建立資料庫 → 以「正式版模式」啟動**,位置選 `asia-east1`(台灣)或 `asia-northeast1`(東京)。
+位置建立後不能更改。
+
+### 4. 發布安全規則(很重要)
+
+**Firestore Database → 規則**,把 [`firebase/firestore.rules`](firebase/firestore.rules) 的內容整份貼上 → **發布**。
+
+這份規則決定誰能讀寫什麼:學生只能讀寫自己的進度與解題紀錄、不能把自己升級成老師、
+解題紀錄寫入後不能修改或刪除;老師可以讀全部、管理題目;訪客只能讀已發布的題目。
 
 ### 5. 把自己設成老師
 
-先在網站上註冊一個帳號,然後回 SQL Editor 執行(信箱換成你的):
+網站沒有任何方式能自己升級成老師,必須在 Firebase 手動改:
 
-```sql
-update public.profiles set role = 'teacher'
-where id = (select id from auth.users where email = '你的信箱@example.com');
-```
+1. 先在網站上註冊一個帳號。
+2. **Firestore Database → 資料** → `users` 集合 → 找到你的文件(文件 ID 是你的使用者 ID,`display_name` 是你註冊的暱稱)。
+3. 把 `role` 欄位的值從 `student` 改成 `teacher`。
 
-重新整理後,頁首就會出現「📋 後台」按鈕。
+重新整理網站,頁首會出現「📋 後台」按鈕。要增加其他老師,對他們的文件做一樣的事。
+
+### 資料結構
+
+| 集合 | 文件 ID | 內容 |
+|---|---|---|
+| `users` | 使用者 ID | `display_name`、`role`(student / teacher)、`created_at` |
+| `progress` | `使用者ID_關卡ID` | `user_id`、`level_id`、`stars`、`xp`、`completed_at` |
+| `custom_levels` | 自動產生(覆寫內建題用 `override-關卡ID`) | `chapter_num`、`position`、`data`、`published`、`override_id` |
+| `submissions` | 自動產生 | 每次執行的 `user_id`、`level_id`、`code`、`output`、`error`、`passed`、`results`、`created_at` |
+| `submission_stats` | `使用者ID_關卡ID` | `attempts`、`passed`、`last_at`(後台總覽用,避免每次讀取大量紀錄) |
+
+### 免費額度
+
+Spark 方案的 Firestore 免費額度,依我所知是每天 5 萬次讀取、2 萬次寫入、1 GiB 儲存(實際數字請以 Firebase 官網為準)。
+一個班級的日常使用通常用不完;後台每次載入會讀取全班的使用者與進度文件,
+學生很多時不要一直按「重新整理」。可以在 Firebase Console 的「使用情形」頁面查看用量。
 
 ## 教師後台
 
 登入教師帳號後,從頁首「📋 後台」進入 `admin.html`:
 
 - **學生進度**:全班一覽表(完成關卡數、總星星、總 XP、最近通關日),依 XP 排序
+- **解題紀錄**:選學生 → 選關卡,由舊到新列出他每一次執行的程式碼、輸出或錯誤訊息、各項測試的通過與否,
+  看得出他一步步怎麼改、卡在哪。
+- **全班錯誤分析**:選一關,看幾人嘗試、幾人通過、平均幾次通過、**最常失敗的測試**、**最常出現的錯誤訊息**,
+  以及**還沒通過的學生**(點名字直接跳到他寫的程式碼)。這些統計都由瀏覽器依解題紀錄計算。
 - **題目管理**:內建 88 題與自訂題目一起列出,可依章節篩選
   - **內建題**可以直接編輯。存檔後會以你的版本取代原本內容,關卡編號不變、
     **學生已完成的紀錄也不會消失**;列表按「還原內建版」即可回到原版。
   - **自訂題**可以新增、編輯、發布/下架、刪除。
 
-> 要編輯內建題必須先在 Supabase 執行 [`supabase/migration-override.sql`](supabase/migration-override.sql)
-> (在 `schema.sql` 之後跑)。沒跑之前後台會顯示提示,內建題只能瀏覽不能編輯,其餘功能不受影響。
+> 學生登入後,每次按「▶ 執行任務」才會被記錄;訪客模式(沒登入)不會。
+> 學生重設進度**不會**清掉解題紀錄,學生也無法修改或刪除紀錄。
+> 這個功能會保存學生寫的程式碼,請事先告知學生(與家長)。
 
 新增題目時填入標題、故事、任務目標、起始碼、提示、XP,以及**測試 JSON**:
 
@@ -99,22 +131,27 @@ where id = (select id from auth.users where email = '你的信箱@example.com');
 
 題目儲存後,所有學生重新整理就會看到——不需要改程式碼或重新部署。
 
+> **AI 整理**:這一版沒有包含(需要 Cloud Functions 保管金鑰,而它要求付費方案)。
+> 之後若要加回來,可以在 Firebase 部署一支 Cloud Function 呼叫 Gemini,
+> 後台的解題紀錄與全班統計資料都已經準備好了。
+
 ## 專案結構
 
 ```
 python-teach-system/
 ├── index.html          # 遊戲入口(星圖 + 挑戰畫面 + 登入彈窗)
-├── admin.html          # 教師後台(學生進度 + 題目管理)
-├── supabase/
-│   └── schema.sql      # 資料表與 RLS 定義(貼到 Supabase 執行)
+├── admin.html          # 教師後台(學生進度 + 解題紀錄 + 全班統計 + 題目管理)
+├── firebase/
+│   ├── firestore.rules # Firestore 安全規則(貼到 Firebase Console 發布)
+│   └── firebase.json   # 指令列部署用(選用)
 ├── css/
 │   ├── tokens.css      # 設計代幣(色彩、字體、間距)
 │   ├── global.css      # 全域基礎樣式與按鈕
 │   ├── game.css        # 遊戲介面元件(含章節區塊、登入表單)
 │   └── admin.css       # 後台版面
 └── js/
-    ├── config.js       # Supabase 連線設定(要自己填)
-    ├── cloud.js        # Supabase 存取層(登入、進度、自訂題目)
+    ├── config.js       # Firebase 連線設定(要自己填)
+    ├── cloud.js        # Firebase 存取層(登入、進度、解題紀錄、自訂題目)
     ├── auth.js         # 登入/註冊 UI
     ├── admin.js        # 教師後台邏輯
     ├── challenges.js   # 課程組裝(內建章節 + 自訂題目合併、階級門檻)
