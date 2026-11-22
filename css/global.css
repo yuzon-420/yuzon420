@@ -13,9 +13,9 @@ body {
   line-height: 1.7;
   color: var(--color-text);
   background:
-    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(88, 60, 200, 0.25), transparent),
-    radial-gradient(ellipse 60% 40% at 90% 10%, rgba(30, 130, 200, 0.18), transparent),
-    var(--color-space-deep);
+    /* 極淡的暗藍天光,其餘幾乎全黑 */
+    radial-gradient(ellipse 90% 60% at 50% 0%, rgba(30, 40, 90, 0.28), transparent),
+    linear-gradient(180deg, #05060f 0%, var(--color-space-deep) 80%);
   background-attachment: fixed;
 }
 
@@ -47,7 +47,7 @@ a {
 code {
   font-family: var(--font-mono);
   font-size: 0.9em;
-  background: rgba(56, 224, 255, 0.12);
+  background: rgba(159, 182, 255, 0.14);
   color: var(--color-cyan);
   padding: 0.1em 0.4em;
   border-radius: 6px;
@@ -63,21 +63,22 @@ code {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background-image:
-    radial-gradient(1.5px 1.5px at 12% 22%, rgba(255, 255, 255, 0.9), transparent),
-    radial-gradient(1px 1px at 32% 68%, rgba(255, 255, 255, 0.6), transparent),
-    radial-gradient(2px 2px at 55% 15%, rgba(160, 220, 255, 0.8), transparent),
-    radial-gradient(1px 1px at 70% 45%, rgba(255, 255, 255, 0.55), transparent),
-    radial-gradient(1.5px 1.5px at 85% 75%, rgba(255, 220, 160, 0.7), transparent),
-    radial-gradient(1px 1px at 20% 88%, rgba(255, 255, 255, 0.5), transparent),
-    radial-gradient(1.5px 1.5px at 92% 30%, rgba(200, 180, 255, 0.7), transparent),
-    radial-gradient(1px 1px at 45% 92%, rgba(255, 255, 255, 0.45), transparent);
-  animation: twinkle 6s ease-in-out infinite alternate;
+  background: url("starfield.svg") center / cover no-repeat;
+  animation: twinkle 7s ease-in-out infinite alternate;
+}
+
+/* 第二層:少數較亮的星星,閃爍節奏不同 */
+.stars::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("starfield-twinkle.svg") center / cover no-repeat;
+  animation: twinkle 3.2s ease-in-out 0.8s infinite alternate-reverse;
 }
 
 @keyframes twinkle {
   from {
-    opacity: 0.55;
+    opacity: 0.6;
   }
   to {
     opacity: 1;
@@ -148,7 +149,7 @@ code {
 }
 
 .btn-run {
-  background: linear-gradient(135deg, #0ea5c4, #2563eb);
+  background: linear-gradient(135deg, #7c5cff, #4a6cf0);
   border-color: transparent;
   color: #fff;
 }
@@ -162,8 +163,8 @@ code {
 }
 
 .btn-hint {
-  background: rgba(255, 196, 77, 0.1);
-  border-color: rgba(255, 196, 77, 0.4);
+  background: rgba(255, 213, 107, 0.1);
+  border-color: rgba(255, 213, 107, 0.42);
   color: var(--color-amber);
 }
 

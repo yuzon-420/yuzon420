@@ -4,7 +4,7 @@
   font-size: 0.7rem;
   letter-spacing: 0.1em;
   color: var(--color-amber);
-  border: 1px solid rgba(255, 196, 77, 0.4);
+  border: 1px solid rgba(255, 213, 107, 0.4);
   border-radius: 999px;
   padding: 0.15em 0.7em;
   vertical-align: middle;
@@ -89,7 +89,7 @@
 }
 
 .admin-table tbody tr:hover {
-  background: rgba(120, 150, 255, 0.05);
+  background: rgba(160, 150, 255, 0.06);
 }
 
 .admin-table .num {
@@ -175,8 +175,8 @@
   padding: 0.8rem 1rem;
   margin-bottom: 1rem;
   border-radius: var(--radius-sm);
-  background: rgba(255, 196, 77, 0.08);
-  border: 1px dashed rgba(255, 196, 77, 0.35);
+  background: rgba(255, 213, 107, 0.08);
+  border: 1px dashed rgba(255, 213, 107, 0.35);
   color: var(--color-amber);
   font-size: 0.88rem;
 }
@@ -392,3 +392,38 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* ── AI 整理 ── */
+.ai-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.8rem 0;
+}
+.ai-result {
+  margin: 0 0 1rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-cyan);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+  font-size: 0.95rem;
+}
+.ai-result.is-error {
+  border-left-color: var(--color-amber);
+  color: var(--color-amber);
+}
+.tutor-admin {
+  margin-top: 1.2rem;
+  padding: 0.8rem 1rem;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+}
+.tutor-admin h4 { margin: 0 0 0.5rem; font-size: 0.95rem; }
+.tutor-item { margin: 0.3rem 0; }
+.tutor-item summary { cursor: pointer; }
+.tutor-item p { margin: 0.3rem 0 0.3rem 1rem; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.9rem; }

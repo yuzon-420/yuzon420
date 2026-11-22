@@ -1,25 +1,25 @@
-/* 設計代幣 — 太空探險主題 */
+/* 設計代幣 — 星空主題(近乎全黑的夜空 + 滿天細星 + 粉橘紫星團) */
 :root {
   /* 色彩 */
-  --color-space-deep: #070b1a;
-  --color-space: #0c1228;
-  --color-surface: #131b38;
-  --color-surface-raised: #1a2447;
-  --color-border: rgba(120, 150, 255, 0.18);
-  --color-border-bright: rgba(120, 170, 255, 0.45);
+  --color-space-deep: #03040b;
+  --color-space: #070914;
+  --color-surface: #0c0f22;
+  --color-surface-raised: #141833;
+  --color-border: rgba(170, 170, 230, 0.16);
+  --color-border-bright: rgba(185, 175, 255, 0.45);
 
-  --color-text: #e8edff;
-  --color-text-dim: #9aa7d6;
-  --color-text-faint: #5f6b99;
+  --color-text: #eef0ff;
+  --color-text-dim: #a9b0e0;
+  --color-text-faint: #6c73a8;
 
-  --color-cyan: #38e0ff;
-  --color-violet: #a78bfa;
-  --color-amber: #ffc44d;
+  --color-cyan: #9fb6ff; /* 星光藍(舊名沿用) */
+  --color-violet: #b7a0ff;
+  --color-amber: #ffd56b; /* 星星金 */
   --color-green: #4ade80;
   --color-red: #ff6b81;
 
-  --glow-cyan: 0 0 18px rgba(56, 224, 255, 0.45);
-  --glow-amber: 0 0 18px rgba(255, 196, 77, 0.45);
+  --glow-cyan: 0 0 18px rgba(140, 150, 255, 0.55);
+  --glow-amber: 0 0 18px rgba(255, 213, 107, 0.5);
 
   /* 字體 */
   --font-display: "Chakra Petch", "Noto Sans TC", sans-serif;
