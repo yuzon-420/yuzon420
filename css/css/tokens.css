@@ -1,12 +1,12 @@
-/* 設計代幣 — 星空主題(午夜靛藍 + 星雲紫 + 星星金) */
+/* 設計代幣 — 星空主題(近乎全黑的夜空 + 滿天細星 + 粉橘紫星團) */
 :root {
   /* 色彩 */
-  --color-space-deep: #060818;
-  --color-space: #0d1030;
-  --color-surface: #151a40;
-  --color-surface-raised: #1f2556;
-  --color-border: rgba(160, 150, 255, 0.2);
-  --color-border-bright: rgba(175, 165, 255, 0.5);
+  --color-space-deep: #03040b;
+  --color-space: #070914;
+  --color-surface: #0c0f22;
+  --color-surface-raised: #141833;
+  --color-border: rgba(170, 170, 230, 0.16);
+  --color-border-bright: rgba(185, 175, 255, 0.45);
 
   --color-text: #eef0ff;
   --color-text-dim: #a9b0e0;

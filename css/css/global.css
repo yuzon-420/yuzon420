@@ -13,13 +13,9 @@ body {
   line-height: 1.7;
   color: var(--color-text);
   background:
-    /* 銀河:一道斜斜的柔光 */
-    linear-gradient(115deg, transparent 30%, rgba(150, 130, 255, 0.07) 45%, rgba(255, 220, 170, 0.05) 52%, transparent 68%),
-    /* 星雲 */
-    radial-gradient(ellipse 70% 50% at 15% -5%, rgba(110, 70, 220, 0.38), transparent),
-    radial-gradient(ellipse 55% 45% at 95% 15%, rgba(70, 90, 230, 0.26), transparent),
-    radial-gradient(ellipse 60% 40% at 60% 110%, rgba(190, 80, 170, 0.16), transparent),
-    linear-gradient(180deg, #0a0c2a 0%, var(--color-space-deep) 70%);
+    /* 極淡的暗藍天光,其餘幾乎全黑 */
+    radial-gradient(ellipse 90% 60% at 50% 0%, rgba(30, 40, 90, 0.28), transparent),
+    linear-gradient(180deg, #05060f 0%, var(--color-space-deep) 80%);
   background-attachment: fixed;
 }
 
@@ -67,40 +63,22 @@ code {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background-image:
-    radial-gradient(1.5px 1.5px at 12% 22%, rgba(255, 255, 255, 0.95), transparent),
-    radial-gradient(1px 1px at 32% 68%, rgba(255, 255, 255, 0.65), transparent),
-    radial-gradient(2px 2px at 55% 15%, rgba(190, 210, 255, 0.9), transparent),
-    radial-gradient(1px 1px at 70% 45%, rgba(255, 255, 255, 0.6), transparent),
-    radial-gradient(1.5px 1.5px at 85% 75%, rgba(255, 226, 170, 0.8), transparent),
-    radial-gradient(1px 1px at 20% 88%, rgba(255, 255, 255, 0.55), transparent),
-    radial-gradient(1.5px 1.5px at 92% 30%, rgba(210, 190, 255, 0.8), transparent),
-    radial-gradient(1px 1px at 45% 92%, rgba(255, 255, 255, 0.5), transparent),
-    radial-gradient(1px 1px at 5% 50%, rgba(255, 255, 255, 0.6), transparent),
-    radial-gradient(1.5px 1.5px at 78% 8%, rgba(255, 255, 255, 0.8), transparent);
-  animation: twinkle 6s ease-in-out infinite alternate;
+  background: url("starfield.svg") center / cover no-repeat;
+  animation: twinkle 7s ease-in-out infinite alternate;
 }
 
-/* 第二層小星星,節奏不同,看起來像一閃一閃 */
+/* 第二層:少數較亮的星星,閃爍節奏不同 */
 .stars::before {
   content: "";
   position: absolute;
   inset: 0;
-  background-image:
-    radial-gradient(1px 1px at 8% 12%, rgba(255, 255, 255, 0.8), transparent),
-    radial-gradient(1px 1px at 25% 40%, rgba(255, 230, 190, 0.8), transparent),
-    radial-gradient(1.5px 1.5px at 40% 8%, rgba(255, 255, 255, 0.7), transparent),
-    radial-gradient(1px 1px at 62% 62%, rgba(200, 215, 255, 0.8), transparent),
-    radial-gradient(1px 1px at 88% 55%, rgba(255, 255, 255, 0.75), transparent),
-    radial-gradient(1.5px 1.5px at 66% 90%, rgba(255, 255, 255, 0.7), transparent),
-    radial-gradient(1px 1px at 96% 92%, rgba(255, 230, 190, 0.7), transparent),
-    radial-gradient(1px 1px at 15% 70%, rgba(255, 255, 255, 0.7), transparent);
-  animation: twinkle 3.5s ease-in-out 1s infinite alternate-reverse;
+  background: url("starfield-twinkle.svg") center / cover no-repeat;
+  animation: twinkle 3.2s ease-in-out 0.8s infinite alternate-reverse;
 }
 
 @keyframes twinkle {
   from {
-    opacity: 0.55;
+    opacity: 0.6;
   }
   to {
     opacity: 1;
