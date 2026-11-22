@@ -1,0 +1,43 @@
+/* 設計代幣 — 星空主題(午夜靛藍 + 星雲紫 + 星星金) */
+:root {
+  /* 色彩 */
+  --color-space-deep: #060818;
+  --color-space: #0d1030;
+  --color-surface: #151a40;
+  --color-surface-raised: #1f2556;
+  --color-border: rgba(160, 150, 255, 0.2);
+  --color-border-bright: rgba(175, 165, 255, 0.5);
+
+  --color-text: #eef0ff;
+  --color-text-dim: #a9b0e0;
+  --color-text-faint: #6c73a8;
+
+  --color-cyan: #9fb6ff; /* 星光藍(舊名沿用) */
+  --color-violet: #b7a0ff;
+  --color-amber: #ffd56b; /* 星星金 */
+  --color-green: #4ade80;
+  --color-red: #ff6b81;
+
+  --glow-cyan: 0 0 18px rgba(140, 150, 255, 0.55);
+  --glow-amber: 0 0 18px rgba(255, 213, 107, 0.5);
+
+  /* 字體 */
+  --font-display: "Chakra Petch", "Noto Sans TC", sans-serif;
+  --font-body: "Noto Sans TC", sans-serif;
+  --font-mono: "JetBrains Mono", "Noto Sans TC", monospace;
+
+  --text-base: clamp(0.95rem, 0.9rem + 0.3vw, 1.05rem);
+  --text-h1: clamp(2rem, 1.2rem + 3.5vw, 3.4rem);
+  --text-h2: clamp(1.4rem, 1.1rem + 1.4vw, 2rem);
+
+  /* 間距與圓角 */
+  --space-section: clamp(2.5rem, 2rem + 3vw, 5rem);
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+
+  /* 動態 */
+  --duration-fast: 150ms;
+  --duration-normal: 300ms;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
