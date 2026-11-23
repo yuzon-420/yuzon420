@@ -7,11 +7,13 @@ import * as state from "./state.js";
 import * as cloud from "./cloud.js";
 import { initAuthUI, renderAuthState } from "./auth.js";
 import { initSettingsUI, setAccount } from "./settings.js";
+import { initTutor, showTutorFor, onRunFinished, refreshState as refreshTutor } from "./tutor.js";
 
 const el = (id) => document.getElementById(id);
 
 let editor = null;
 let currentLevel = null;
+let lastRun = null; // 最近一次執行結果(給 AI 助教參考),換關卡就清掉
 let course = DEFAULT_COURSE;
 let runnerMessage = "Python 引擎載入中，可以先閱讀講義。";
 
@@ -117,12 +119,14 @@ function openLevel(index, readOnly = false) {
   el("output-console").textContent = isReady() ? "等待執行…" : runnerMessage;
   el("output-console").classList.remove("has-error");
   el("test-results").innerHTML = "";
+  lastRun = null;
 
   editor.setValue(currentLevel.starter ?? "");
   showView("challenge");
   editor.refresh();
   editor.setSize("100%", null);
   if (!readOnly) editor.focus();
+  showTutorFor(currentLevel);
 }
 
 function showView(name) {
@@ -154,6 +158,8 @@ async function handleRun() {
     const code = editor.getValue();
     const result = await runCode(code, currentLevel.tests, currentLevel.stdin ?? []);
     renderRunResult(result);
+    lastRun = result;
+    onRunFinished(!result.error && result.results.every((r) => r.passed));
     // 記錄給老師後台看;不等待、失敗也不影響遊玩
     cloud.recordSubmission({ levelId: currentLevel.id, code, result });
     if (!result.error && result.results.every((r) => r.passed)) {
@@ -239,6 +245,7 @@ async function onAuthChanged(user) {
   }
   renderStats();
   renderMap();
+  refreshTutor();
 }
 
 /* ── 初始化 ── */
@@ -271,6 +278,11 @@ function bindEvents() {
     renderMap();
   });
   el("btn-next").addEventListener("click", goNext);
+  initTutor({
+    getLevel: () => currentLevel,
+    getCode: () => editor.getValue(),
+    getLastResult: () => lastRun,
+  });
 }
 
 async function boot() {

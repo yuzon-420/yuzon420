@@ -105,6 +105,19 @@
             <pre id="output-console" class="output-console">等待執行…</pre>
             <div id="test-results" class="test-results"></div>
           </div>
+
+          <div class="tutor-panel" id="tutor-panel">
+            <div class="panel-header">
+              <span class="panel-title">🤖 AI 助教<span class="tutor-sub">只給提示,不給答案</span></span>
+              <button class="btn btn-hint is-hidden" id="btn-ask-tutor">🙋 請助教看看</button>
+            </div>
+            <div class="tutor-log" id="tutor-log" aria-live="polite"></div>
+            <p class="tutor-note" id="tutor-note"></p>
+            <form class="tutor-form" id="tutor-form">
+              <input id="tutor-input" type="text" maxlength="1000" autocomplete="off" placeholder="卡住了嗎?問問助教…" />
+              <button class="btn btn-run" id="tutor-send" type="submit">送出</button>
+            </form>
+          </div>
         </div>
       </div>
     </section>

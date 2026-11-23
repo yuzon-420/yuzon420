@@ -78,7 +78,14 @@
             <button class="btn btn-ghost" id="btn-code-reload">↻ 重新載入</button>
           </div>
         </div>
+        <div class="ai-bar">
+          <button class="btn btn-run" id="btn-ai-student">🤖 AI 整理這位學生(整體)</button>
+          <button class="btn btn-ghost" id="btn-ai-student-level">🤖 只分析這一關</button>
+          <span class="ai-note">AI 只看程式整理過的紀錄,結果僅供參考;每次會呼叫 OpenAI 一次。</span>
+        </div>
+        <div id="ai-student-result" class="ai-result is-hidden" aria-live="polite"></div>
         <div id="code-list" class="sub-list"></div>
+        <div id="tutor-admin" class="tutor-admin is-hidden"></div>
       </div>
 
       <!-- 全班共通錯誤 -->
@@ -92,6 +99,12 @@
             <button class="btn btn-ghost" id="btn-class-reload">↻ 重新統計</button>
           </div>
         </div>
+        <div class="ai-bar">
+          <button class="btn btn-run" id="btn-ai-class-level">🤖 AI 整理這一關全班</button>
+          <button class="btn btn-ghost" id="btn-ai-class-all">🤖 整門課哪裡最卡</button>
+          <span class="ai-note">整理時學生姓名會被隱藏(只用「學生1、學生2」);結果僅供參考。</span>
+        </div>
+        <div id="ai-class-result" class="ai-result is-hidden" aria-live="polite"></div>
         <div id="class-stats" class="class-stats is-hidden"></div>
       </div>
 

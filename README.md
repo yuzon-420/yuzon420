@@ -34,7 +34,6 @@ python3 -m http.server 8765
 不做這步網站也能玩,只是進度只留在本機、沒有後台。
 用到 Firebase 的兩個服務:**Authentication**(登入)與 **Firestore**(資料庫)。
 這一版**不需要** Cloud Functions,所以不必升級付費方案,免費的 Spark 方案就夠用。
-切換到新的 Firebase 專案不會搬移舊系統的帳號或資料;學生需要在新系統重新註冊,進度也會從零開始。
 
 ### 1. 建立 Firebase 專案與網頁應用程式
 
@@ -92,6 +91,7 @@ Firebase 預設不需要驗證信箱,學生註冊後可以直接登入。
 | `custom_levels` | 自動產生(覆寫內建題用 `override-關卡ID`) | `chapter_num`、`position`、`data`、`published`、`override_id` |
 | `submissions` | 自動產生 | 每次執行的 `user_id`、`level_id`、`code`、`output`、`error`、`passed`、`results`、`created_at` |
 | `submission_stats` | `使用者ID_關卡ID` | `attempts`、`passed`、`last_at`(後台總覽用,避免每次讀取大量紀錄) |
+| `tutor_messages` | 自動產生 | AI 助教對話:`user_id`、`level_id`、`question`、`reply`(只有後端能寫入) |
 
 ### 免費額度
 
@@ -131,9 +131,76 @@ Spark 方案的 Firestore 免費額度,依我所知是每天 5 萬次讀取、2 
 
 題目儲存後,所有學生重新整理就會看到——不需要改程式碼或重新部署。
 
-> **AI 整理**:這一版沒有包含(需要 Cloud Functions 保管金鑰,而它要求付費方案)。
-> 之後若要加回來,可以在 Firebase 部署一支 Cloud Function 呼叫 Gemini,
-> 後台的解題紀錄與全班統計資料都已經準備好了。
+## AI 功能(OpenAI GPT)
+
+這個功能需要一支「後端」保管 OpenAI 金鑰(金鑰不能放在網頁裡),所以用 **Firebase Cloud Functions** 實作,
+放在 `firebase/functions/`。**Cloud Functions 需要把 Firebase 升級成 Blaze(用多少付多少)方案**,
+升級時要綁信用卡;沒有部署這一步,網站其他功能完全不受影響,只是 AI 按鈕會顯示「AI 後端還沒部署」。
+
+### 有哪些功能
+
+- **學生端「🤖 AI 助教」**(挑戰畫面下方):學生在輸入框提問,或程式沒通過時按「🙋 請助教看看」。
+  助教用**蘇格拉底式提問**引導——幫忙看懂錯誤訊息、問引導問題、肯定做對的地方,
+  **不會給完整答案,也不會直接說「第 N 行改成什麼」**。只有學生主動按才會呼叫 AI。
+  助教不影響星星與 XP;訪客(沒登入)不能使用。
+- **老師端「🤖 AI 整理」**(後台):
+  - 解題紀錄分頁:整理**這位學生**的整體狀況(重複犯的錯誤、不熟悉的主題),或只分析某一關的錯誤歷程
+  - 全班錯誤分析分頁:整理**某一關全班**的共通錯誤與教學建議,或看**整門課哪裡最卡**
+  - 整理時學生姓名不會送給 AI(只用「學生1、學生2」),統計數字由程式計算,AI 負責歸納與建議
+- 後台「解題紀錄」會列出該學生問過助教的問題與助教的回覆。
+
+### 部署步驟(只要做一次)
+
+1. Firebase Console → 左下角把專案升級到 **Blaze** 方案,並到 Google Cloud 的「帳單 → 預算與快訊」設一個預算上限提醒。
+2. 到 OpenAI 平台建立 API 金鑰,並在 OpenAI 那邊也設好用量上限。
+3. 在電腦上安裝 [Node.js 22](https://nodejs.org/) 與 Firebase CLI:`npm i -g firebase-tools`,然後 `firebase login`
+4. 在 `firebase/` 資料夾裡執行:
+
+```bash
+cd firebase
+firebase use --add                           # 選你的專案
+firebase functions:secrets:set OPENAI_API_KEY  # 貼上 OpenAI 金鑰(只存在 Google 的密鑰管理,不會出現在程式碼)
+cd functions && npm install && cd ..
+firebase deploy --only functions,firestore:rules
+```
+
+`firestore:rules` 這一步會一併發布新的規則(多了 `tutor_messages`),別漏掉。
+
+### 可調整的設定
+
+在 `firebase/functions/` 建立 `.env` 檔(內容每行一個設定),再重新部署:
+
+```
+OPENAI_MODEL=gpt-5.4-mini
+OPENAI_REASONING_EFFORT=low
+TUTOR_DAILY_LIMIT=40
+```
+
+- `OPENAI_MODEL`:預設 `gpt-5.4-mini`。模型名稱會隨 OpenAI 更新,若出現「請確認模型名稱」的錯誤,改成你帳號可用的模型。
+- `OPENAI_REASONING_EFFORT`:選填。只有推理型模型才支援,不確定就不要設。
+- `TUTOR_DAILY_LIMIT`:每位學生每天最多問助教幾次(預設 40),避免被濫用造成費用。
+- 後端區域是 `asia-east1`(台灣);若要改,`js/cloud.js` 的 `FUNCTIONS_REGION` 與 `firebase/functions/index.js` 要一起改。
+
+### 費用與隱私
+
+- 費用:每次助教提問或老師整理都會呼叫一次 OpenAI,依用量計費(助教每次大約是零點幾美分以內,實際請看 OpenAI 的價目表與你的用量頁)。
+  每日次數上限與兩邊的預算提醒是主要的保護。
+- 隱私:**學生提問時,他的程式碼、執行結果與問題會送到 OpenAI 處理**;老師整理時,
+  學生的程式碼與提問(不含姓名)也會送出。請事先告知學生與家長,並自行確認符合學校與當地的資料規範。
+- 助教的對話會存在 Firestore 的 `tutor_messages`(學生只能看自己的、老師能看全部,前端不能寫入)。
+- 資料表新增:`tutor_messages`(`user_id`、`level_id`、`question`、`reply`、`created_at`)、
+  `tutor_usage`(每人每天的使用次數,只有後端能讀寫)。
+
+### 本機測試後端邏輯
+
+```bash
+cd firebase/functions && npm install && npm test
+```
+
+測試用假的資料庫與假的 OpenAI 回應,不需要金鑰、也不會花錢。
+
+> 助教的「不給答案」靠提示詞與回覆檢查(超過 2 行的程式碼區塊會被移除)來把關,
+> AI 偶爾仍可能說得太明白,所以請把它當作輔助,老師可以在後台看學生問了什麼。
 
 ## 專案結構
 
@@ -143,7 +210,8 @@ python-teach-system/
 ├── admin.html          # 教師後台(學生進度 + 解題紀錄 + 全班統計 + 題目管理)
 ├── firebase/
 │   ├── firestore.rules # Firestore 安全規則(貼到 Firebase Console 發布)
-│   └── firebase.json   # 指令列部署用(選用)
+│   ├── firebase.json   # 指令列部署用
+│   └── functions/      # AI 後端(Cloud Functions):助教 tutor、老師整理 analyze
 ├── css/
 │   ├── tokens.css      # 設計代幣(色彩、字體、間距)
 │   ├── global.css      # 全域基礎樣式與按鈕
@@ -151,7 +219,8 @@ python-teach-system/
 │   └── admin.css       # 後台版面
 └── js/
     ├── config.js       # Firebase 連線設定(要自己填)
-    ├── cloud.js        # Firebase 存取層(登入、進度、解題紀錄、自訂題目)
+    ├── cloud.js        # Firebase 存取層(登入、進度、解題紀錄、自訂題目、AI 呼叫)
+    ├── tutor.js        # 學生端 AI 助教面板
     ├── auth.js         # 登入/註冊 UI
     ├── admin.js        # 教師後台邏輯
     ├── challenges.js   # 課程組裝(內建章節 + 自訂題目合併、階級門檻)

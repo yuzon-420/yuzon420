@@ -14,6 +14,9 @@ let A = null; // firebase-auth 模組
 let F = null; // firebase-firestore 模組
 let auth = null;
 let db = null;
+let fbApp = null;
+let fnCache = null; // firebase-functions 模組(第一次用 AI 才載入)
+const FUNCTIONS_REGION = "asia-east1"; // 要和 firebase/functions/index.js 的區域一致
 
 let profile = null; // { display_name, role }
 let profilePromise = null;
@@ -21,6 +24,8 @@ let cachedUser = null; // { id, email, displayName }
 let authCallback = null;
 let signingUp = false; // 註冊進行中:先不通知,等 users 文件寫好再通知
 let deferredEvent = null;
+
+export const getCachedUser = () => cachedUser;
 
 export function isConfigured() {
   return Boolean(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId);
@@ -106,6 +111,7 @@ export async function initCloud(onAuthChanged) {
   A = authMod;
   F = fsMod;
   const app = initializeApp(FIREBASE_CONFIG);
+  fbApp = app;
   auth = A.getAuth(app);
   db = F.getFirestore(app);
   authCallback = onAuthChanged ?? null;
@@ -486,6 +492,55 @@ export async function adminDeleteLevel(id) {
   requireClient();
   try {
     await F.deleteDoc(F.doc(db, "custom_levels", id));
+  } catch (err) {
+    throw new Error(friendly(err));
+  }
+}
+
+
+/* ───────────────────────── AI(Cloud Functions) ───────────────────────── */
+
+async function callFunction(name, payload) {
+  requireClient();
+  if (!auth.currentUser) throw new Error("請先登入");
+  fnCache ??= await import(`${CDN}/firebase-functions.js`);
+  const fns = fnCache.getFunctions(fbApp, FUNCTIONS_REGION);
+  try {
+    const res = await fnCache.httpsCallable(fns, name)(payload);
+    return res.data;
+  } catch (err) {
+    const code = String(err?.code ?? "").replace("functions/", "");
+    if (code === "not-found" && /function|not.?found/i.test(err?.message ?? "")) {
+      throw new Error("AI 後端還沒部署(老師需要先部署 Cloud Functions,見 README)");
+    }
+    if (code === "internal" || code === "unavailable" || !err?.message) {
+      throw new Error(err?.message && err.message !== "internal" ? err.message : "AI 暫時沒有回應,請稍後再試");
+    }
+    throw new Error(err.message);
+  }
+}
+
+/** 向 AI 助教提問;回傳 { reply, remaining } */
+export function askTutor(payload) {
+  return callFunction("tutor", payload);
+}
+
+/** 老師端:請 AI 整理;回傳 { analysis, stats } */
+export function adminAnalyze(payload) {
+  return callFunction("analyze", payload);
+}
+
+/** 老師端:讀取學生向助教問過的對話(新到舊) */
+export async function adminFetchTutorMessages({ userId, levelId } = {}) {
+  requireClient();
+  const parts = [F.collection(db, "tutor_messages")];
+  if (userId) parts.push(F.where("user_id", "==", userId));
+  if (levelId) parts.push(F.where("level_id", "==", levelId));
+  try {
+    const snap = await F.getDocs(F.query(...parts, F.limit(200)));
+    return snap.docs
+      .map((d) => ({ id: d.id, ...d.data(), created_at: toIso(d.data().created_at) }))
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
   } catch (err) {
     throw new Error(friendly(err));
   }

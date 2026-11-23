@@ -1,0 +1,135 @@
+rules_version = '2';
+
+// PyQuest Firestore 安全規則
+// 貼到 Firebase Console → Firestore Database → 規則(Rules)→ 發布(Publish)
+//
+// 角色:
+//   學生  只能讀寫「自己的」進度與解題紀錄;不能把自己升級成老師
+//   老師  users 文件的 role 欄位為 'teacher';可讀全部、管理題目
+//   訪客  只能讀「已發布」的題目
+// 老師身分只能在 Firebase Console 手動設定(把某人 users 文件的 role 改成 teacher),
+// 網站本身沒有任何方式能把人升級成老師。
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isTeacher() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+    }
+
+    function ownsExisting() {
+      return signedIn() && resource.data.user_id == request.auth.uid;
+    }
+
+    // ── 使用者資料 ─────────────────────────────
+    match /users/{uid} {
+      allow read: if (signedIn() && request.auth.uid == uid) || isTeacher();
+
+      // 註冊時建立自己的資料,而且一定是 student
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['display_name', 'role', 'created_at'])
+        && request.resource.data.role == 'student'
+        && request.resource.data.display_name is string
+        && request.resource.data.display_name.size() <= 40
+        && request.resource.data.created_at == request.time;
+
+      // 只能改自己的暱稱,role 與其他欄位都不能動
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['display_name'])
+        && request.resource.data.display_name is string
+        && request.resource.data.display_name.size() <= 40;
+    }
+
+    // ── 關卡進度(文件 id = 使用者id_關卡id)─────────
+    match /progress/{id} {
+      allow read: if ownsExisting() || isTeacher();
+
+      allow create, update: if signedIn()
+        && request.resource.data.user_id == request.auth.uid
+        && id == request.auth.uid + '_' + request.resource.data.level_id
+        && request.resource.data.keys().hasOnly(['user_id', 'level_id', 'stars', 'xp', 'completed_at'])
+        && request.resource.data.level_id is string
+        && request.resource.data.stars is int
+        && request.resource.data.stars >= 0 && request.resource.data.stars <= 3
+        && request.resource.data.xp is int
+        && request.resource.data.xp >= 0 && request.resource.data.xp <= 100000
+        && request.resource.data.completed_at == request.time;
+
+      // 設定畫面的「重設進度」:只能刪自己的
+      allow delete: if ownsExisting();
+    }
+
+    // ── 老師出的題目(含覆寫內建題的記錄)──────────
+    match /custom_levels/{id} {
+      allow read: if resource.data.published == true || isTeacher();
+      allow create, update, delete: if isTeacher();
+    }
+
+    // ── 解題紀錄:寫入後不能修改或刪除 ─────────────
+    match /submissions/{id} {
+      allow read: if ownsExisting() || isTeacher();
+
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(
+             ['user_id', 'level_id', 'code', 'output', 'error', 'passed', 'results', 'created_at'])
+        && request.resource.data.keys().hasAll(
+             ['user_id', 'level_id', 'code', 'output', 'error', 'passed', 'results', 'created_at'])
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.level_id is string
+        && request.resource.data.level_id.size() <= 100
+        && request.resource.data.code is string
+        && request.resource.data.code.size() <= 20000
+        && request.resource.data.output is string
+        && request.resource.data.output.size() <= 5000
+        && (request.resource.data.error == null
+            || (request.resource.data.error is string && request.resource.data.error.size() <= 5000))
+        && request.resource.data.passed is bool
+        && request.resource.data.results is list
+        && request.resource.data.results.size() <= 50
+        && request.resource.data.created_at == request.time;
+    }
+
+    // ── 解題統計:每位學生 × 每一關一份(後台總覽用,避免讀取大量紀錄)──
+    // 網站用「合併寫入 + increment(1)」更新,所以不需要先讀取;
+    // passed 只在通關時才寫入 true,沒寫入就代表還沒通過(也因此不會被改回 false)。
+    match /submission_stats/{id} {
+      allow read: if ownsExisting() || isTeacher();
+
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['user_id', 'level_id', 'attempts', 'passed', 'last_at'])
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.level_id is string
+        && id == request.auth.uid + '_' + request.resource.data.level_id
+        && request.resource.data.attempts == 1
+        && request.resource.data.get('passed', false) is bool
+        && request.resource.data.last_at == request.time;
+
+      allow update: if ownsExisting()
+        && request.resource.data.keys().hasOnly(['user_id', 'level_id', 'attempts', 'passed', 'last_at'])
+        && request.resource.data.user_id == resource.data.user_id
+        && request.resource.data.level_id == resource.data.level_id
+        && request.resource.data.attempts == resource.data.attempts + 1
+        && request.resource.data.get('passed', false) is bool
+        && (!resource.data.get('passed', false) || request.resource.data.get('passed', false))
+        && request.resource.data.last_at == request.time;
+    }
+
+    // ── AI 助教對話:只有後端(Admin SDK)能寫入;學生看自己的、老師看全部 ──
+    // tutor_usage(每日次數)沒有任何前端權限,由下方「其他一律拒絕」擋住。
+    match /tutor_messages/{id} {
+      allow read: if ownsExisting() || isTeacher();
+      allow write: if false;
+    }
+
+    // 其他一律拒絕
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

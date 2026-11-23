@@ -56,6 +56,22 @@ async function boot() {
 }
 
 function bindEvents() {
+  el("btn-ai-student").addEventListener("click", (e) => {
+    const userId = el("code-student").value;
+    if (userId) runAnalyze(e.currentTarget, "ai-student-result", { mode: "student", userId }, () => el("code-student").value === userId);
+  });
+  el("btn-ai-student-level").addEventListener("click", (e) => {
+    const userId = el("code-student").value;
+    const levelId = el("code-level").value;
+    if (userId && levelId) runAnalyze(e.currentTarget, "ai-student-result", { mode: "student", userId, levelId }, () => el("code-student").value === userId && el("code-level").value === levelId);
+  });
+  el("btn-ai-class-level").addEventListener("click", (e) => {
+    const levelId = el("class-level").value;
+    if (levelId) runAnalyze(e.currentTarget, "ai-class-result", { mode: "class", levelId }, () => el("class-level").value === levelId);
+  });
+  el("btn-ai-class-all").addEventListener("click", (e) =>
+    runAnalyze(e.currentTarget, "ai-class-result", { mode: "class" })
+  );
   el("tab-students").addEventListener("click", () => switchTab("students"));
   el("tab-levels").addEventListener("click", () => switchTab("levels"));
   el("tab-code").addEventListener("click", () => switchTab("code"));
@@ -538,6 +554,7 @@ async function loadSubmissionList() {
   const levelId = el("code-level").value;
   const list = el("code-list");
   list.innerHTML = "";
+  el("ai-student-result").classList.add("is-hidden");
 
   if (!userId || !levelId) {
     el("code-summary").textContent = subSummaryError
@@ -555,6 +572,7 @@ async function loadSubmissionList() {
     return;
   }
   rows.reverse(); // 由舊到新,才看得出學生一步步怎麼改
+  loadTutorMessages(userId, levelId);
 
   const passedAt = rows.findIndex((r) => r.passed);
   el("code-summary").textContent =
@@ -702,6 +720,7 @@ async function loadClassStats() {
     return;
   }
   const token = ++classToken;
+  el("ai-class-result").classList.add("is-hidden");
   box.classList.remove("is-hidden");
   box.textContent = "統計中…";
   try {
@@ -756,6 +775,62 @@ function jumpToStudent(userId, levelId) {
   el("code-student").value = userId;
   pendingLevel = levelId;
   switchTab("code");
+}
+
+/* ── AI 整理(後端 analyze,由 OpenAI 產生)── */
+function levelsMeta() {
+  return Object.fromEntries(
+    course.challenges.map((c) => [c.id, { title: `第 ${c.label} 關 ${c.title}`, topic: c.topic }])
+  );
+}
+
+const aiBusy = new Set();
+async function runAnalyze(btn, boxId, body, sameView) {
+  const box = el(boxId);
+  if (aiBusy.has(boxId)) return;
+  aiBusy.add(boxId);
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "⏳ AI 整理中…(約 10~30 秒)";
+  box.classList.remove("is-hidden", "is-error");
+  box.textContent = "AI 正在閱讀解題紀錄…";
+  try {
+    const { analysis } = await cloud.adminAnalyze({ ...body, levels: levelsMeta() });
+    if (sameView && !sameView()) return; // 等待期間老師已切到別人/別關,不要把結果貼錯地方
+    box.textContent = analysis; // 純文字,不當 HTML 解析
+  } catch (err) {
+    if (sameView && !sameView()) return;
+    box.classList.add("is-error");
+    box.textContent = `AI 整理失敗:${err.message}`;
+  } finally {
+    aiBusy.delete(boxId);
+    btn.disabled = false;
+    btn.textContent = label;
+  }
+}
+
+let tutorToken = 0;
+/** 顯示這位學生問過助教什麼(老師可以看出學生卡在哪、問得對不對) */
+async function loadTutorMessages(userId, levelId) {
+  const box = el("tutor-admin");
+  const token = ++tutorToken;
+  box.classList.add("is-hidden");
+  if (!userId) return;
+  try {
+    const rows = (await cloud.adminFetchTutorMessages({ userId })).filter((r) => !levelId || r.level_id === levelId);
+    if (token !== tutorToken || rows.length === 0) return;
+    box.classList.remove("is-hidden");
+    box.innerHTML =
+      `<h4>💬 這位學生在「${escapeHtml(levelId ? levelTitle(levelId) : "各關卡")}」問過 AI 助教(${rows.length} 則)</h4>` +
+      rows
+        .map(
+          (r) => `<details class="tutor-item"><summary>${escapeHtml(String(r.question).slice(0, 60))}</summary>
+            <p><b>學生:</b>${escapeHtml(r.question)}</p><p><b>助教:</b>${escapeHtml(r.reply)}</p></details>`
+        )
+        .join("");
+  } catch {
+    /* 讀不到就不顯示;不影響看程式碼 */
+  }
 }
 
 function escapeHtml(text) {

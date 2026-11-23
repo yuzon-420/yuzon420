@@ -1,0 +1,16 @@
+{
+  "name": "pyquest-functions",
+  "private": true,
+  "description": "PyQuest AI 後端:蘇格拉底式 AI 助教與老師端答題整理",
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^14.5.1",
+    "firebase-functions": "^7.4.0"
+  }
+}
