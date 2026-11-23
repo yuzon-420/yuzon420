@@ -96,7 +96,7 @@
 }
 
 .map-intro h1 {
-  background: linear-gradient(90deg, var(--color-cyan), var(--color-violet), var(--color-amber));
+  background: linear-gradient(90deg, #ffffff, #cfd8f3 45%, #b5bfe6 75%, #e8dcc8);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

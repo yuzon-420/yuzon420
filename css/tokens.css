@@ -8,17 +8,17 @@
   --color-border: rgba(170, 170, 230, 0.16);
   --color-border-bright: rgba(185, 175, 255, 0.45);
 
-  --color-text: #eef0ff;
-  --color-text-dim: #a9b0e0;
-  --color-text-faint: #6c73a8;
+  --color-text: #e9ecf6; /* 月光銀 */
+  --color-text-dim: #aab2cc;
+  --color-text-faint: #70789a;
 
-  --color-cyan: #9fb6ff; /* 星光藍(舊名沿用) */
-  --color-violet: #b7a0ff;
+  --color-cyan: #b9c7ee; /* 銀藍星光(舊名沿用) */
+  --color-violet: #c6bcf0;
   --color-amber: #ffd56b; /* 星星金 */
   --color-green: #4ade80;
   --color-red: #ff6b81;
 
-  --glow-cyan: 0 0 18px rgba(140, 150, 255, 0.55);
+  --glow-cyan: 0 0 18px rgba(170, 185, 240, 0.5);
   --glow-amber: 0 0 18px rgba(255, 213, 107, 0.5);
 
   /* 字體 */
